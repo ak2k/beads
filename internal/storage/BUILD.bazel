@@ -107,6 +107,7 @@ go_test(
     data = [
         ":tree_go_srcs",
         "//backend/conformance:go_srcs",
+        "//internal/httpclient:go_srcs",
     ],
     embed = [":storage"],
     deps = [
