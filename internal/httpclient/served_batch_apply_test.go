@@ -229,6 +229,18 @@ func TestServedBatchApplyRefusesAnUnusableRequest(t *testing.T) {
 	conformance.RunBatchApplyRefusesAnUnusableRequest(t, t.Context(), newServedBatchApplyFixture(t, "hba26"))
 }
 
+// TestServedBatchApplyStampsSpawnerIDOnlyWhenNamed wires the dep_add
+// HasSpawner/ThreadID lineage conformance case onto the http leg (S5): a
+// served default Config always advertises CapBatchApplyDepAddLineage (it is
+// in httpapi's unconditional behaviorCapabilities), so this exercises the
+// member on the WIRE, round-tripping through refuseUnservedDepAddLineage's
+// pre-dial check (which never fires here, since the capability is present)
+// and applyDepAddItemBody's encoding, server-side batch_apply.go decode, and
+// the role's own StampWaitsForSpawnerID.
+func TestServedBatchApplyStampsSpawnerIDOnlyWhenNamed(t *testing.T) {
+	conformance.RunBatchApplyStampsSpawnerIDOnlyWhenNamed(t, t.Context(), newServedBatchApplyFixture(t, "hba27"))
+}
+
 // TestServedBatchApplyRefusesAMetadataRefWithoutNamingTheKey is the running pin
 // beside the park above: the same request, driven end to end, asserting
 // everything the contract asserts EXCEPT the key inside the member — the
