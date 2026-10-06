@@ -92,6 +92,33 @@ func (s *DoltStore) PreviousExternalRef(ctx context.Context, issueID string, asO
 	return ref, found, err
 }
 
+// historyReadChunk bounds the ids per dolt_history_issues read. Each read
+// scans the whole history and costs more with each id: on a 19.6k-commit
+// store, 16 ids cost about 1.8 single-id reads, which keeps a read inside the
+// pool's default 10 s read timeout wherever one per-issue query takes under
+// about 5.5 s.
+const historyReadChunk = 16
+
+// PreviousExternalRefs answers PreviousExternalRef for many issues at one
+// asOf. Implements storage.ExternalRefHistoryBatchQuerier.
+//
+// Uses the pool, as PreviousExternalRef does: with no dedicated dial, refused
+// dials cannot open the breaker while the pool is healthy. A read past the
+// pool's read timeout (10 s by default) fails the batch, and the tracker
+// falls back per issue.
+func (s *DoltStore) PreviousExternalRefs(ctx context.Context, ids []string, asOf time.Time) (map[string]string, error) {
+	var refs map[string]string
+	err := s.withReadTx(ctx, func(tx *sql.Tx) error {
+		var err error
+		refs, err = issueops.PreviousExternalRefsInTx(ctx, tx, ids, asOf, historyReadChunk)
+		if err != nil {
+			return wrapQueryError("get previous external refs", err)
+		}
+		return nil
+	})
+	return refs, err
+}
+
 // ChangedIssueIDs returns the set of issue IDs whose data differs between
 // fromCommit and toCommit, derived from dolt_diff over the issues, labels,
 // dependencies, and comments tables. An issue is reported under Removed
